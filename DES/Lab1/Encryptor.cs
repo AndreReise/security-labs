@@ -21,7 +21,7 @@ public class Encryptor
     // Число звсувів на і-й раунд (лівий зсув)
     private readonly int[] clst = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
 
-    //Compression Permutation Table  
+    // Compression Permutation Table  
     private readonly int[] cpt =
     {
         14, 17, 11, 24, 1, 5, 3, 28, 15, 6, 21, 10,
@@ -45,19 +45,19 @@ public class Encryptor
     // буфер для запису результатів маніпуляцій з 32 бітами лівої части
     private readonly int[] ctLPT = new int[32];
 
-    // буфер для запису результатів перестановки 32 бітів лівої части
+    // буфер для запису результатів ПЕРЕстановки 32 бітів лівої части
     private readonly int[] ctPBoxLPT = new int[32];
 
     // буфер для запису результатів маніпуляцій з 32 бітами правої части
     private readonly int[] ctRPT = new int[32];
 
-    // буфер для запису результатів перестановки 32 бітів правої части
+    // буфер для запису результатів ПІДстановки 32 бітів правої части
     private readonly int[] ctSBoxLPT = new int[32];
 
-    // буфер для перестановки 28 ключа для обчислення лівого циклічного зрушення
+    // буфер для перестановки 28 біт ключа для обчислення лівого циклічного зрушення
     private readonly int[] CKey = new int[28];
 
-    // буфер для перестановки 28 ключа для обчислення правого циклічного зрушення
+    // буфер для перестановки 28 біт ключа для обчислення правого циклічного зрушення
     private readonly int[] DKey = new int[28];
 
     // Expansion Permutation Table  
@@ -123,18 +123,18 @@ public class Encryptor
 
     private readonly int[] ptextbitslice = new int[64];
 
-    // буфер для збереження 32біт лівої частини блоку. 
+    // буфер для збереження 32біт лівої частини блоку. Буфер використовується для зберігання проміжного результату між етапами раунда алгоритму.
     private readonly int[] ptLPT = new int[32];
 
-    // буфер для збереження 32біт резульатту перестановки правої частини блоку. 
+    // буфер для збереження 32біт резульату перестановки правої частини блоку. 
     private readonly int[] ptPBoxRPT = new int[32];
 
-    // буфер для збереження 32біт правої частини блоку. 
+    // буфер для збереження 32біт правої частини блоку. Буфер використовується для зберігання проміжного результату між етапами раунда алгоритму.
     private readonly int[] ptRPT = new int[32];
 
     private readonly int[] ptSBoxRPT = new int[32];
 
-    // таблиці підстановки
+    // Таблиці підстановки (S-box)
     private readonly int[,] sbox = new int[8, 64]
     {
         {
@@ -495,35 +495,46 @@ public class Encryptor
 
         for (var i = 0; i < 16; i++)
         {
+            // 1. Зберігання правої половини тексту ptRPT в тимчасовому масиві tempRPT
             this.SaveTemporaryHPT(this.ptRPT, this.tempRPT);
 
+            // 2.Визначення кількості циклічних зсувів(n) для даного раунду згідно з таблицею циклічних зсувів clst.
             n = this.clst[i];
 
+            // 3. Розділення ключа на ліву половину CKey і праву половину DKey.
             this.DivideIntoCKeyAndDKey();
 
+            // 4. Виконання циклічних зсувів лівої і правої половини ключа на n позицій.
             for (var j = 0; j < n; j++)
             {
                 this.CircularLeftShift(this.CKey);
                 this.CircularLeftShift(this.DKey);
             }
 
+            // 5. Об'єднання лівої і правої половини ключа, створюючи підключ для даного раунду.
             this.AttachCKeyAndDKey();
 
+            // 6. Розширення правої половини тексту на 48 бітів за допомогою таблиці розширення.
             this.CompressionPermutation();
 
+            // 7. Виконання операції XOR між стиснутим ключем і розширеною правою половиною тексту.
             this.ExpansionPermutation(this.ptRPT, this.ptExpandedRPT);
-
             this.XOROperation(this.compressedkey, this.ptExpandedRPT, this.XoredRPT, 48);
 
+            // 8. Використання таблиці S-Box для заміни результатів XOR.
             this.SBoxSubstitution(this.XoredRPT, this.ptSBoxRPT);
 
+            // 9. Виконання перестановки P-Box для отримання нової правої половини тексту.
             this.PBoxPermutation(this.ptSBoxRPT, this.ptPBoxRPT);
 
+            // 10.Виконання операції XOR між результатом P-Box перестановки і лівою половиною тексту.
             this.XOROperation(this.ptPBoxRPT, this.ptLPT, this.ptRPT, 32);
 
+            // 11.Заміна лівої половини тексту на тимчасову праву половину.
             this.Swap(this.tempRPT, this.ptLPT);
 
-            Console.WriteLine($"Entropy on round {i + 1}: {this.CalcEntropy()}");
+            // 12.Виведення значення ентропії для оцінки якості шифрування після кожного раунду.
+                Console.WriteLine($"Entropy on round {i + 1}: {this.CalcEntropy()}");
         }
     }
 
@@ -551,6 +562,9 @@ public class Encryptor
         }
     }
 
+    /// <summary>
+    /// Метод-помічник для старту процесу шифрування.
+    /// </summary>
     private void StartEncryption()
     {
         this.InitialPermutation(this.ptextbitslice, this.ippt);
@@ -673,7 +687,7 @@ public class Encryptor
     }
 
     /// <summary>
-    /// 
+    /// Реферс див. <see cref="SixteenRounds"/> для дешифрування. 
     /// </summary>
     private void ReversedSixteenRounds()
     {
@@ -712,7 +726,7 @@ public class Encryptor
     }
 
     /// <summary>
-    /// 
+    /// Метод-помічник для старту процесу дешифрування.
     /// </summary>
     private void StartDecryption()
     {
